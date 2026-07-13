@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Byaj Calculator</title>
+  
+  <link rel="manifest" href="manifest.json?v=3">
+  <meta name="theme-color" content="#0ebb52">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: #131a2c;
+      --bg-input: #090d16;
+      --primary: #0ebb52;
+      --primary-glow: rgba(14, 187, 82, 0.2);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      padding: 15px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Status, Update aur Install UI Elements */
+    #status-indicator {
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .online { background: rgba(14, 187, 82, 0.2); color: var(--primary); }
+    .offline { background: rgba(239, 68, 68, 0.2); color: #ef4444; display: block !important; }
+
+    #update-banner {
+      width: 100%;
+      max-width: 500px;
+      background: #007bff;
+      color: white;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #update-banner button { width: auto; padding: 6px 12px; background: white; color: #007bff; }
+
+    #btnInstall {
+      width: 100%;
+      max-width: 500px;
+      background: #0ebb52;
+      color: black;
+      font-weight: bold;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      display: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: var(--bg-card);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.05);
+      box-sizing: border-box;
+    }
+
+    .receipt-card {
+      background: linear-gradient(135deg, #16223f, #111a2e);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px dashed rgba(14, 187, 82, 0.4);
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .receipt-header {
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .receipt-header h3 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .receipt-header span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+
+    .receipt-row.total {
+      border-top: 1px dashed rgba(255,255,255,0.2);
+      padding-top: 12px;
+      margin-top: 12px;
+      font-weight: bold;
+      font-size: 18px;
+      color: var(--primary);
+    }
+
+    .chart-container {
+      background: rgba(0,0,0,0.2);
+      padding: 12px;
+      border-radius: 12px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .progress-bar-wrapper {
+      display: flex;
+      height: 10px;
+      width: 100%;
+      border-radius: 99px;
+      overflow: hidden;
+      background: #22314d;
+      margin-top: 6px;
+    }
+
+    .progress-principal { background: #38bdf8; width: 0%; transition: width 0.4s ease; }
+    .progress-interest { background: #fb923c; width: 0%; transition: width 0.4s ease; }
+
+    .chart-legends { display: flex; justify-content: space-between; font-size: 12px; }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      background: var(--bg-input);
+      color: var(--text-main);
+      border-radius: 14px;
+      border: 1px solid #22314d;
+      font-size: 16px;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+    
+    .time-container, .date-container {
+      display: flex;
+      gap: 12px;
+    }
+
+    .time-container input { flex: 2; }
+    .time-container select { flex: 1; }
+    .date-box { flex: 1; }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .btn-calc { background: var(--primary); color: #000; grid-column: span 2; font-size: 16px; }
+    .btn-download { background: #fb923c; color: #000; }
+    .btn-formula { background: #38bdf8; color: #000; }
+    .btn-table { background: #a855f7; color: #fff; grid-column: span 2; }
+
+    #formula {
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(56, 189, 248, 0.05);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      margin-top: 16px;
+      display: none;
+    }
+    
+    .formula-title { color: #38bdf8; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+    .formula-math { font-family: monospace; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; color: #38bdf8; font-size: 14px; white-space: pre-wrap; margin: 0; }
+
+    .table-container {
+      margin-top: 16px;
+      display: none;
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid #22314d;
+      border-radius: 14px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th, td { padding: 12px; border-bottom: 1px solid #22314d; }
+    th { background: #16223f; color: var(--primary); position: sticky; top: 0; }
+  </style>
+</head>
+<body>
+
+<div id="status-indicator"></div>
+<div id="update-banner">
+  <span>नया वर्जन उपलब्ध है!</span>
+  <button onclick="reloadApp()">अपडेट करें</button>
+</div>
+<button id="btnInstall" onclick="installPWA()">📲 ऐप इंस्टॉल करें (Install App)</button>
+
+<div class="container">
+  <div id="receiptArea" class="receipt-card">
+    <div class="receipt-header">
+      <h3> RECEIPT </h3>
+      <span id="receiptTimestamp">डिजिटल स्टेटमेंट</span>
+    </div>
+    
+    <div class="receipt-row">
+      <span style="color: var(--text-muted);">कैलकुलेशन प्रकार:</span>
+      <span id="rcptType" style="font-weight: 500;">मासिक दर (Village)</span>
+    </div>
+    <div class="receipt-row">
+      <span style="color: var(--text-muted);" id="lblRcptAmount">मूलधन राशि:</span>
+      <span id="rcptAmount" style="font-weight: 500;">₹0.00</span>
+    </div>
+    <div class="receipt-row" id="emiRow" style="display: none;">
+      <span style="color: #38bdf8;">मासिक किश्त (EMI):</span>
+      <span id="rcptEmi" style="color: #38bdf8; font-weight: bold;">₹0.00</span>
+    </div>
+    <div class="receipt-row">
+      <span style="color: var(--text-muted);" id="lblRcptInterest">कुल ब्याज राशि:</span>
+      <span id="rcptInterest" style="color: #fb923c; font-weight: 500;">₹0.00</span>
+    </div>
+    <div class="receipt-row total">
+      <span id="lblRcptTotal">कुल देय राशि:</span>
+      <span id="rcptTotal">₹0.00</span>
+    </div>
+
+    <div class="chart-container" id="liveChart">
+      <div class="chart-legends">
+        <span style="color: #38bdf8;">● मूलधन: <span id="lblPrincipalPer">0%</span></span>
+        <span style="color: #fb923c;">● ब्याज: <span id="lblInterestPer">0%</span></span>
+      </div>
+      <div class="progress-bar-wrapper">
+        <div id="barPrincipal" class="progress-principal"></div>
+        <div id="barInterest" class="progress-interest"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="calculatorInputs">
+    <div class="form-group">
+      <label>कैलकुलेशन का प्रकार चुनें</label>
+      <select id="calculationType" onchange="handleCalcTypeChange()">
+        <optgroup label="ब्याज गणना (Interest)">
+          <option value="village" selected>मासिक दर (Village/Monthly)</option>
+          <option value="bank">सालाना दर (Bank/Yearly)</option>
+          <option value="compound">चक्रवृद्धि ब्याज (Compound Interest)</option>
+          <option value="datetodate">तारीख से तारीख (Date-to-Date)</option>
+        </optgroup>
+        <optgroup style="color:grey" label="बैंकिंग और लोन (Banking & Loan)">
+          <option value="loan">लोन किश्त कैलकुलेटर (EMI)</option>
+          <option value="fd">फिक्स डिपॉजिट (FD Calculator)</option>
+          <option value="rd">आवृत्ति जमा (RD Calculator)</option>
+          <option value="sip">म्यूचुअल फंड (SIP Calculator)</option>
+        </optgroup>
+        <optgroup label="व्यापारिक टूल्स (Business Tools)">
+          <option value="gst">जीएसटी कैलकुलेटर (GST)</option>
+          <option value="discount">छूट / डिस्काउंट (Discount)</option>
+        </optgroup>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label id="lblAmount">मूलधन / Principal Amount (₹)</label>
+      <input type="text" id="amount" placeholder="रकम दर्ज करें" oninput="liveFormatCurrency(this)">
+    </div>
+
+    <div class="form-group">
+      <label id="lblRate">ब्याज दर / Interest Rate (%)</label>
+      <input type="number" id="rate" placeholder="0%" step="any" oninput="calculateAll()">
+    </div>
+    
+    <div id="standardTimeSection" class="form-group">
+      <label id="lblTime">समय अवधि / Duration</label>
+      <div class="time-container">
+        <input type="number" id="time" placeholder="0" step="any" oninput="calculateAll()">
+        <select id="timeType" onchange="calculateAll()">
+          <option value="day">दिन (Days)</option>
+          <option value="month" selected>महीना (Months)</option>
+          <option value="year">साल (Years)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="dateTimeSection" class="form-group" style="display:none;">
+      <div class="date-container">
+        <div class="date-box">
+          <label>प्रारंभ तिथि</label>
+          <input type="date" id="startDate" onchange="calculateAll()">
+        </div>
+        <div class="date-box">
+          <label>अंतिम तिथि</label>
+          <input type="date" id="endDate" onchange="calculateAll()">
+        </div>
+      </div>
+    </div>
+
+    <div id="gstSection" class="form-group" style="display:none;">
+      <label>जीएसटी प्रकार</label>
+      <select id="gstType" onchange="calculateAll()">
+        <option value="add">GST जोड़ें (+ Add GST)</option>
+        <option value="remove">GST हटाएँ (- Remove GST)</option>
+      </select>
+    </div>
+
+    <div id="formula"><pre id="formulaText" class="formula-math"></pre></div>
+  </div>
+
+  <div class="table-container" id="monthlyTableContainer">
+    <table id="amortizationTable">
+      <thead>
+        <tr>
+          <th>अवधि</th>
+          <th>कुल जमा/किश्त</th>
+          <th>मूलधन</th>
+          <th>ब्याज</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="button-grid">
+    <button class="btn-calc" onclick="calculateAll()">Calculate</button>
+    <button class="btn-download" onclick="triggerDirectDownload()">Download</button>
+    <button class="btn-formula" onclick="formulaShow()">💡 Formula</button>
+    <button class="btn-table" id="btnTableShow" onclick="tableShow()" style="display:none;">शो मंथली ब्रेकअप टेबल</button>
+  </div>
+</div>
+
+<script>
+  let generatedInterest = 0, generatedTotal = 0, currentPrincipal = 0;
+  let d2dYears = 0, d2dMonths = 0, d2dDays = 0;
+  let deferredPrompt;
+
+  function cleanNumber(val) { return parseFloat(val.replace(/,/g, '')) || 0; }
+  function formatCurrency(num) { return num.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 }); }
+
+  function liveFormatCurrency(input) {
+    let value = input.value.replace(/[^0-9.]/g, '');
+    let parts = value.split('.');
+    if (parts.length > 2) parts = [parts[0], parts.slice(1).join('')];
+    
+    let rawNumber = parts[0] ? parseInt(parts[0], 10) : 0;
+    let formatted = parts[0] ? rawNumber.toLocaleString('en-IN') : '';
+    if (parts.length === 2) {
+      formatted += '.' + parts[1].substring(0, 2);
+    }
+    
+    let selectionStart = input.selectionStart;
+    let oldLength = input.value.length;
+    input.value = formatted;
+    let newLength = input.value.length;
+    input.setSelectionRange(selectionStart + (newLength - oldLength), selectionStart + (newLength - oldLength));
+    
+    calculateAll(); 
+  }
+
+  function handleCalcTypeChange() {
+    let type = document.getElementById('calculationType').value;
+    let selText = document.getElementById('calculationType').options[document.getElementById('calculationType').selectedIndex].text;
+    document.getElementById('rcptType').innerText = selText;
+
+    document.getElementById('standardTimeSection').style.display = 'block';
+    document.getElementById('dateTimeSection').style.display = 'none';
+    document.getElementById('gstSection').style.display = 'none';
+    document.getElementById('emiRow').style.display = 'none';
+    document.getElementById('btnTableShow').style.display = 'none';
+    document.getElementById('monthlyTableContainer').style.display = 'none';
+    
+    document.getElementById('lblAmount').innerText = "मूलधन / Principal Amount (₹)";
+    document.getElementById('lblRcptAmount').innerText = "मूलधन राशि:";
+    document.getElementById('lblRate').innerText = "ब्याज दर / Interest Rate (%)";
+    document.getElementById('lblRcptInterest').innerText = "कुल ब्याज राशि:";
+    document.getElementById('lblRcptTotal').innerText = "कुल देय राशि:";
+
+    if (type === 'datetodate') {
+      document.getElementById('standardTimeSection').style.display = 'none';
+      document.getElementById('dateTimeSection').style.display = 'block';
+    } else if (type === 'gst') {
+      document.getElementById('standardTimeSection').style.display = 'none';
+      document.getElementById('gstSection').style.display = 'block';
+      document.getElementById('lblAmount').innerText = "कुल राशि / Net Amount (₹)";
+      document.getElementById('lblRcptAmount').innerText = "वास्तविक मूल्य:";
+      document.getElementById('lblRate').innerText = "GST दर / GST Rate (%)";
+      document.getElementById('lblRcptInterest').innerText = "GST टैक्स राशि:";
+      document.getElementById('lblRcptTotal').innerText = "कुल (GST सहित):";
+    } else if (type === 'discount') {
+      document.getElementById('lblAmount').innerText = "मूल कीमत / Original Price (₹)";
+      document.getElementById('lblRcptAmount').innerText = "मूल कीमत:";
+      document.getElementById('lblRate').innerText = "छूट प्रतिशत / Discount (%)";
+      document.getElementById('lblRcptInterest').innerText = "छूट की बचत:";
+      document.getElementById('lblRcptTotal').innerText = "अंतिम कीमत:";
+      document.getElementById('standardTimeSection').style.display = 'none';
+    } else if (type === 'loan') {
+      document.getElementById('emiRow').style.display = 'flex';
+      document.getElementById('btnTableShow').style.display = 'block';
+    } else if (type === 'sip' || type === 'fd' || type === 'rd') {
+      document.getElementById('btnTableShow').style.display = 'block';
+      if(type === 'sip') document.getElementById('lblAmount').innerText = "मासिक निवेश / Monthly SIP (₹)";
+    }
+    calculateAll();
+  }
+
+  function calculateAll() {
+    let type = document.getElementById('calculationType').value;
+    let P = cleanNumber(document.getElementById('amount').value);
+    let R = parseFloat(document.getElementById('rate').value) || 0;
+    let tInput = parseFloat(document.getElementById('time').value) || 0;
+    let tType = document.getElementById('timeType').value;
+
+    let interest = 0; let total = 0; let showChart = false;
+    document.getElementById('rcptAmount').innerText = "₹" + formatCurrency(P);
+
+    if (P <= 0) { updateResults(0, 0, 0, false); return; }
+
+    let tYears = tInput; let tMonths = tInput;
+    if (tType === 'day') { tYears = tInput / 365; tMonths = tInput / 30.4167; }
+    if (tType === 'month') { tYears = tInput / 12; tMonths = tInput; }
+    if (tType === 'year') { tYears = tInput; tMonths = tInput * 12; }
+
+    currentPrincipal = P;
+
+    switch (type) {
+      case 'village':
+        interest = P * (R / 100) * tMonths;
+        total = P + interest;
+        showChart = true;
+        break;
+      case 'bank':
+        interest = P * (R / 100) * tYears;
+        total = P + interest;
+        showChart = true;
+        break;
+      case 'compound':
+        total = P * Math.pow((1 + R / 100), tYears);
+        interest = total - P;
+        showChart = true;
+        break;
+      case 'datetodate':
+        let d1 = new Date(document.getElementById('startDate').value);
+        let d2 = new Date(document.getElementById('endDate').value);
+        if (!isNaN(d1) && !isNaN(d2) && d2 >= d1) {
+          let y1 = d1.getFullYear(), m1 = d1.getMonth(), day1 = d1.getDate();
+          let y2 = d2.getFullYear(), m2 = d2.getMonth(), day2 = d2.getDate();
+          if (day2 < day1) { day2 += 30; m2 -= 1; }
+          if (m2 < m1) { m2 += 12; y2 -= 1; }
+          d2dYears = y2 - y1; d2dMonths = m2 - m1; d2dDays = day2 - day1;
+          let totalMonthsD2D = (d2dYears * 12) + d2dMonths + (d2dDays / 30);
+          interest = P * (R / 100) * totalMonthsD2D;
+          total = P + interest;
+          showChart = true;
+        }
+        break;
+      case 'loan':
+        let monthlyRate = (R / 12) / 100;
+        let emi = monthlyRate === 0 ? P / tMonths : P * monthlyRate * Math.pow(1 + monthlyRate, tMonths) / (Math.pow(1 + monthlyRate, tMonths) - 1);
+        total = emi * tMonths; interest = total - P;
+        document.getElementById('rcptEmi').innerText = `₹${formatCurrency(emi)}`;
+        showChart = true;
+        break;
+      case 'fd':
+        total = P * Math.pow((1 + (R / 4) / 100), (4 * tYears));
+        interest = total - P;
+        showChart = true;
+        break;
+      case 'rd':
+        let n = tMonths; let i = R / 100; total = 0; currentPrincipal = P * n;
+        for (let j = 1; j <= n; j++) { total += P * Math.pow((1 + i / 4), (4 * (n - j + 1) / 12)); }
+        interest = total - currentPrincipal;
+        document.getElementById('rcptAmount').innerText = "₹" + formatCurrency(currentPrincipal);
+        showChart = true;
+        break;
+      case 'sip':
+        let iRate = (R / 12) / 100; currentPrincipal = P * tMonths;
+        total = P * ((Math.pow(1 + iRate, tMonths) - 1) / iRate) * (1 + iRate);
+        interest = total - currentPrincipal;
+        document.getElementById('rcptAmount').innerText = "₹" + formatCurrency(currentPrincipal);
+        showChart = true;
+        break;
+      case 'gst':
+        let gstType = document.getElementById('gstType').value;
+        if (gstType === 'add') {
+          interest = P * (R / 100); total = P + interest;
+        } else {
+          total = P / (1 + (R / 100)); interest = P - total; currentPrincipal = total; total = currentPrincipal + interest;
+        }
+        document.getElementById('rcptAmount').innerText = "₹" + formatCurrency(currentPrincipal);
+        break;
+      case 'discount':
+        interest = P * (R / 100); total = P - interest;
+        break;
+    }
+
+    generatedInterest = interest; generatedTotal = total;
+    updateResults(interest, total, currentPrincipal, showChart);
+    
+    if(document.getElementById('formula').style.display === 'block') updateFormulaText();
+  }
+
+  function updateResults(interest, total, principal, showChart) {
+    document.getElementById('rcptInterest').innerText = `₹${formatCurrency(interest)}`;
+    document.getElementById('rcptTotal').innerText = `₹${formatCurrency(total)}`;
+
+    let chartContainer = document.getElementById('liveChart');
+    if (showChart && total > 0) {
+      chartContainer.style.display = 'block';
+      let pPer = (principal / total) * 100;
+      let iPer = (interest / total) * 100;
+      document.getElementById('lblPrincipalPer').innerText = pPer.toFixed(1) + '%';
+      document.getElementById('lblInterestPer').innerText = iPer.toFixed(1) + '%';
+      document.getElementById('barPrincipal').style.width = pPer + '%';
+      document.getElementById('barInterest').style.width = iPer + '%';
+    } else {
+      chartContainer.style.display = 'none';
+    }
+  }
+
+  function updateFormulaText() {
+    let type = document.getElementById('calculationType').value;
+    let P = cleanNumber(document.getElementById('amount').value);
+    let R = parseFloat(document.getElementById('rate').value) || 0;
+    let tInput = parseFloat(document.getElementById('time').value) || 0;
+    let tType = document.getElementById('timeType').value;
+    let fText = document.getElementById('formulaText');
+
+    let tMonths = tType === 'year' ? tInput * 12 : (tType === 'day' ? (tInput / 30.4167).toFixed(2) : tInput);
+    let tYears = tType === 'month' ? (tInput / 12).toFixed(2) : (tType === 'day' ? (tInput / 365).toFixed(2) : tInput);
+
+    let txt = "";
+    switch(type) {
+      case 'village':
+        txt = `[साधारण ब्याज]\nब्याज = (P × R × T माह) / 100\n(${P} × ${R} × ${tMonths}) / 100 = ₹${formatCurrency(generatedInterest)}`;
+        break;
+      case 'bank':
+        txt = `[वार्षिक साधारण ब्याज]\nब्याज = (P × R × T वर्ष) / 100\n(${P} × ${R} × ${tYears}) / 100 = ₹${formatCurrency(generatedInterest)}`;
+        break;
+      case 'compound':
+        txt = `[चक्रवृद्धि ब्याज]\nराशि = P × (1 + R/100)^T\n${P} × (1 + ${R}/100)^${tYears} = ₹${formatCurrency(generatedTotal)}`;
+        break;
+      case 'datetodate':
+        txt = `[सटीक अवधि]: ${d2dYears} वर्ष, ${d2dMonths} माह, ${d2dDays} दिन\nकुल महीने: ${(d2dYears*12 + d2dMonths + d2dDays/30).toFixed(2)}\nब्याज = (${P} × ${R} × महीने) / 100 = ₹${formatCurrency(generatedInterest)}`;
+        break;
+      case 'loan':
+        txt = `[EMI सूत्र]\nE = [P × r × (1+r)^n] / [(1+r)^n - 1]\nकुल भुगतान = ₹${formatCurrency(generatedTotal)}`;
+        break;
+      case 'fd':
+        txt = `[FD त्रैमासिक चक्रवृद्धि]\nA = P × (1 + R/400)^(4×वर्ष)\nकुल मैच्योरिटी = ₹${formatCurrency(generatedTotal)}`;
+        break;
+      case 'rd':
+        txt = `[बैंकिंग RD STATEMENT]\nकुल जमा मूलधन = ₹${formatCurrency(currentPrincipal)}\nकुल त्रैमासिक चक्रवृद्धि ब्याज = ₹${formatCurrency(generatedInterest)}`;
+        break;
+      case 'sip':
+        txt = `[SIP म्यूचुअल फंड]\nM = P × [((1 + i)^n - 1) / i] × (1 + i)\nभविष्य मूल्य = ₹${formatCurrency(generatedTotal)}`;
+        break;
+      case 'gst':
+        txt = `[GST ब्रेकअप]\nटैक्स योग = ₹${formatCurrency(generatedInterest)}\nकुल मूल्य = ₹${formatCurrency(generatedTotal)}`;
+        break;
+      case 'discount':
+        txt = `[डिस्काउंट बचत]\nबचत राशि = ₹${formatCurrency(generatedInterest)}\nअंतिम देय दाम = ₹${formatCurrency(generatedTotal)}`;
+        break;
+    }
+    fText.innerText = txt;
+  }
+
+  function formulaShow() {
+    let fBox = document.getElementById('formula');
+    fBox.style.display = (fBox.style.display === 'block') ? 'none' : 'block';
+    if(fBox.style.display === 'block') updateFormulaText();
+  }
+
+  function tableShow() {
+    let tContainer = document.getElementById('monthlyTableContainer');
+    if (tContainer.style.display === 'block') { tContainer.style.display = 'none'; return; }
+    let type = document.getElementById('calculationType').value;
+    let P = cleanNumber(document.getElementById('amount').value);
+    let R = parseFloat(document.getElementById('rate').value) || 0;
+    let tInput = parseFloat(document.getElementById('time').value) || 0;
+    let tType = document.getElementById('timeType').value;
+    let tMonths = tType === 'year' ? tInput * 12 : (tType === 'day' ? Math.ceil(tInput/30.4) : tInput);
+    let tbody = document.getElementById('tableBody');
+    tbody.innerHTML = "";
+
+    if(P <= 0 || tMonths <= 0) return;
+    tContainer.style.display = 'block';
+
+    if (type === 'loan') {
+      let monthlyRate = (R / 12) / 100; let balance = P;
+      let emi = monthlyRate === 0 ? P / tMonths : P * monthlyRate * Math.pow(1 + monthlyRate, tMonths) / (Math.pow(1 + monthlyRate, tMonths) - 1);
+      for (let i = 1; i <= tMonths; i++) {
+        let interest = balance * monthlyRate; let principal = emi - interest; balance -= principal;
+        if(balance < 0) balance = 0;
+        tbody.innerHTML += `<tr><td>माह ${i}</td><td>₹${formatCurrency(emi)}</td><td>₹${formatCurrency(principal)}</td><td>₹${formatCurrency(interest)}</td></tr>`;
+      }
+    } else {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">ब्रेकअप केवल लोन (EMI) के लिए उपलब्ध है।</td></tr>`;
+    }
+  }
+
+  function triggerDirectDownload() {
+    document.getElementById('receiptTimestamp').innerText = new Date().toLocaleString('hi-IN');
+    let type = document.getElementById('calculationType').value;
+    let elementReceipt = document.getElementById('receiptArea');
+
+    html2canvas(elementReceipt, { backgroundColor: '#131a2c', scale: 2, useCORS: true }).then(canvas => {
+      let link = document.createElement('a');
+      link.download = `Receipt_${type}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 1.0);
+      link.click();
+      
+      if (type === 'loan') {
+        let tContainer = document.getElementById('monthlyTableContainer');
+        let initialDisplay = tContainer.style.display;
+        
+        if (initialDisplay !== 'block') {
+          tableShow();
+        }
+
+        setTimeout(() => {
+          html2canvas(tContainer, { backgroundColor: '#131a2c', scale: 2, useCORS: true }).then(tableCanvas => {
+            let tableLink = document.createElement('a');
+            tableLink.download = `Monthly_Breakup_Table.jpg`;
+            tableLink.href = tableCanvas.toDataURL('image/jpeg', 1.0);
+            tableLink.click();
+            
+            if (initialDisplay !== 'block') {
+              tContainer.style.display = 'none';
+            }
+          });
+        }, 300);
+      }
+    });
+  }
+
+  // --- प्रोग्रेसिव वेब ऐप (PWA) और स्टेटस हैंडलर लॉजिक ---
+  function updateOnlineStatus() {
+    const status = document.getElementById('status-indicator');
+    if (navigator.onLine) {
+      status.className = 'online';
+      status.innerText = '● आप ऑनलाइन हैं';
+      setTimeout(() => { status.style.display = 'none'; }, 2000);
+    } else {
+      status.className = 'offline';
+      status.innerText = '📴 ऑफलाइन मोड चालू है | बिना इंटरनेट काम करेगा';
+    }
+  }
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+
+  let newWorker;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            document.getElementById('update-banner').style.display = 'flex';
+          }
+        });
+      });
+    });
+  }
+
+  function reloadApp() {
+    if (newWorker) {
+      newWorker.postMessage({ action: 'skipWaiting' });
+    }
+    window.location.reload();
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('btnInstall').style.display = 'block';
+  });
+
+  function installPWA() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('यूज़र ने ऐप इंस्टॉल कर लिया');
+        }
+        document.getElementById('btnInstall').style.display = 'none';
+        deferredPrompt = null;
+      });
+    }
+  }
+</script>
+</body>
+</html>
